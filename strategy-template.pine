@@ -1,30 +1,33 @@
-//@version=3
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © franferdez
+
 
 // BEGIN UNCOMMENT FOR BACKTESTING
-strategy(title="Strategy Template", shorttitle="STRAT-TMPLT", overlay=true, 
-         pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
+strategy(title="Strategy Template", shorttitle="Strategy Template V4", overlay=true, pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
 strategyEntry(name, direction, myCondition) =>
-    if direction==1 and name=="Long"
-        strategy.entry("Long", 1, when= myCondition)
-    if direction==0 and name=="Short"
-        strategy.entry("Short", 0, when= myCondition)
+    if direction == 1 and name == "Long"
+        strategy.entry("Long", 1, when=myCondition)
+    if direction == 0 and name == "Short"
+        strategy.entry("Short", 0, when=myCondition)
 strategyClose(name, myCondition) =>
-    if name=="Long"
-        strategy.close("Long", when= myCondition)
-    if name=="Short"
-        strategy.close("Short", when= myCondition)
-isStrategy = true, isStudy = false
+    if name == "Long"
+        strategy.close("Long", when=myCondition)
+    if name == "Short"
+        strategy.close("Short", when=myCondition)
+isStrategy = true
+isStudy = false
 // END UNCOMMENT FOR BACKTESTING
 
 // BEGIN UNCOMMENT FOR ALERTS
 // study(title="[Autoview][Alerts] Simple Template 1.0", shorttitle="[AL] Simple Template 1.0", overlay=true)
-// strategyEntry(RUNNING, AS, STUDY) =>   RUNNING=='false' ? false : false 
+// strategyEntry(RUNNING, AS, STUDY) =>   RUNNING=='false' ? false : false
 // strategyClose(ALERTS, NOT_STRATEGY) => ALERTS== 'false' ? false : false
 // isStrategy = false, isStudy = true
 // END UNCOMMENT FOR ALERTS
 
 //  Name: Pine Strategy Template 1.02
-//  Author:   TensorTom 
+//  Author:   TensorTom
 //  Previous fork by: MrBit (yatrader2)
 //  Based on work by: JustUncleL and CryptoRox
 //  Revision: R0.02
@@ -34,51 +37,62 @@ isStrategy = true, isStudy = false
 //////////////////////////////////////////////////////////////////////////////////////////
 // INPUTS
 
-useRenko   = input(false, title="This a RENKO Chart?")
+useRenko = input(false, title="This a RENKO Chart?")
 // WARNING: Using Heikin-Ashi may result in inaccurate backtest results
-useHeikin  = input(false, title="Use Heikin-Ashi Candles? (BT WILL BE UNRELIABLE)")
-// Use Alternate Anchor TF for MAs 
-anchor = input(0,minval=0,maxval=1440,title="Alternate TimeFrame Multiplier (0=none)")
+useHeikin = input(false, title="Use Heikin-Ashi Candles? (BT WILL BE UNRELIABLE)")
+// Use Alternate Anchor TF for MAs
+anchor = input(0, minval=0, maxval=1440, title="Alternate TimeFrame Multiplier (0=none)")
 // If have anchor specified, calculate the base multiplier.
 //mult  = isintraday ? anchor==0 or interval<=0 or interval>=anchor or anchor>1440? 1 : round(anchor/interval) : 1
 //mult := isdwm?  1 : mult  // Only available Daily or less
-mult = anchor>0 ? anchor : 1 
-open_  = useHeikin ? security(heikinashi(tickerid), period, open) : security(tickerid, period, open)
-close_ = useHeikin ? security(heikinashi(tickerid), period, close) : security(tickerid, period, close)
-high_  = useRenko? max(close_,open_) : useHeikin ? security(heikinashi(tickerid), period, high) : security(tickerid, period, high)
-low_   = useRenko? min(close_,open_) : useHeikin ? security(heikinashi(tickerid), period, low) :  security(tickerid, period, low)
+mult = anchor > 0 ? anchor : 1
+security_1 = security(heikinashi(syminfo.tickerid), timeframe.period, open)
+security_2 = security(syminfo.tickerid, timeframe.period, open)
+open_ = useHeikin ? security_1 : security_2
+security_3 = security(heikinashi(syminfo.tickerid), timeframe.period, close)
+security_4 = security(syminfo.tickerid, timeframe.period, close)
+close_ = useHeikin ? security_3 : security_4
+security_5 = security(heikinashi(syminfo.tickerid), timeframe.period, high)
+security_6 = security(syminfo.tickerid, timeframe.period, high)
+high_ = useRenko ? max(close_, open_) : useHeikin ? security_5 : security_6
+security_7 = security(heikinashi(syminfo.tickerid), timeframe.period, low)
+security_8 = security(syminfo.tickerid, timeframe.period, low)
+low_ = useRenko ? min(close_, open_) : useHeikin ? security_7 : security_8
 uPrice = input(title="Price", defval="close", options=["close", "high", "low"])
-src= uPrice=="close" ? close_ : uPrice=="high" ? high_ : uPrice=="low" ? low_ : na
+src = uPrice == "close" ? close_ :
+   uPrice == "high" ? high_ : uPrice == "low" ? low_ : na
 // This is superced by the design of specifying Open and Close setting in strategy
 // fastExit  = input(false,title="Use Opposite Trade as a Close Signal")
 fastExit = false
-isLong = input(true,title="Allow Longs")
-isShort = input(true,title="Allow Shorts")
-flipTrade = input(false,title="Flip/Invert Strategy")
-clrBars   = input(false,title="Colour Candles to Trade Order state")
+isLong = input(true, title="Allow Longs")
+isShort = input(true, title="Allow Shorts")
+flipTrade = input(false, title="Flip/Invert Strategy")
+clrBars = input(false, title="Colour Candles to Trade Order state")
 
 // CONSTANTS
 AQUA = #00FFFFFF
 BLUE = #0000FFFF
-RED  = #FF0000FF
+RED = #FF0000FF
 LIME = #00FF00FF
 GRAY = #808080FF
-DARKRED   = #8B0000FF
+DARKRED = #8B0000FF
 DARKGREEN = #006400FF
+LIGHTGREEN = #a5d6a7
+LIGHTRED = #ef9a9a
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // BEGIN ACTUAL STRATEGY
 
 // Strategy specific inputs
-quick = input(14, title="Quick Period", step=1, minval=1) 
-slow = input(28, title="Slow Period", step=1, minval=1) 
+quick = input(14, title="Quick Period", step=1, minval=1)
+slow = input(28, title="Slow Period", step=1, minval=1)
 
 // UPDATE WITH ACTUAL STRATEGY HERE
 
-openLong   =  crossover(sma(src, quick*mult), sma(src, slow*mult))
-closeLong  =  crossunder(sma(src, quick*mult), sma(src, slow*mult)) 
+openLong = crossover(sma(src, quick * mult), sma(src, slow * mult))
+closeLong = crossunder(sma(src, quick * mult), sma(src, slow * mult))
 
-openShort  = closeLong
+openShort = closeLong
 closeShort = openLong
 
 // END ACTUAL STRATEGY
@@ -89,48 +103,49 @@ closeShort = openLong
 //* Period selector for backtesting and optionally alerts
 
 // A switch to control background coloring of the test period
-testPeriodforAlerts = input(title="Limit Alerts to Test Period", type=bool, defval=false)
-testPeriodBackground = input(title="Color Test Period?", type=bool, defval=false)
+testPeriodforAlerts = input(title="Limit Alerts to Test Period", type=input.bool, defval=false)
+testPeriodBackground = input(title="Color Test Period?", type=input.bool, defval=false)
 
 // Autoset Backtest Period
 autolen = input(title="Auto set backtest Start", defval=true)
 custom_candle_start = 0
-timecondition_hourly = n > round(76.5633 * pow((interval / 60), 2) - 1745.19 * (interval / 60) + 10649)
-timecondition_daily = n > round(1000 / interval) // Only for bitcoin, need a separate quadratic fit for other securities
-autolen_timePeriod = autolen ? (interval >= 60 and interval <= 720 and timecondition_hourly) or (interval < 60 and timecondition_daily) : false
-    
+timecondition_hourly = bar_index >
+   round(76.5633 * pow(timeframe.multiplier / 60, 2) - 1745.19 * (timeframe.multiplier / 60) + 10649)
+timecondition_daily = bar_index > round(1000 / timeframe.multiplier)  // Only for bitcoin, need a separate quadratic fit for other securities
+autolen_timePeriod = autolen ? timeframe.multiplier >= 60 and timeframe.multiplier <= 720 and
+   timecondition_hourly or timeframe.multiplier < 60 and timecondition_daily :
+   false
+
 // Or set a specifc period
-testStartMonth = input(1, "Backtest Start Month",minval=1,maxval=12)
-testStartYear = input(2019, "Backtest Start Year",minval=1980)
+testStartMonth = input(1, "Backtest Start Month", minval=1, maxval=12)
+testStartYear = input(2019, "Backtest Start Year", minval=1980)
 // testStartDay = input(1, "Backtest Start Day",minval=1,maxval=31)
 testStartDay = 1
-testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, 0, 0)
 
-testStopMonth = input(title="Backtest Stop Month", type=integer, defval=12, step=1, minval=1, maxval=12)
-testStopYear = input(title="Backtest Stop Year", type=integer, defval=2019, step=1, minval=2013, maxval=2020)
+testStopMonth = input(title="Backtest Stop Month", type=input.integer, defval=12, step=1, minval=1, maxval=12)
+testStopYear = input(title="Backtest Stop Year", type=input.integer, defval=2019, step=1, minval=2013, maxval=2020)
 //testStopDay = input(title="Backtest Stop Day", type=integer, defval=31, step=1, minval=1, maxval=31)
-testStopDay=31
-testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testStopDay = 31
+testPeriodStop = timestamp(testStopYear, testStopMonth, testStopDay, 0, 0)
 
 // See if we are in the the time period (or we are not using it)
 testPeriod() =>
     // Are we running as a strategy or as a Study with testPeriod restriction?
-    isStrategy or testPeriodforAlerts ?
-      autolen ? autolen_timePeriod :
-      time >= testPeriodStart and time <= testPeriodStop ? true : false
-      : true // Not a strategy or not using testPeriod so it is "always" the period
-    
+    isStrategy or testPeriodforAlerts ? autolen ? autolen_timePeriod :
+       time >= testPeriodStart and time <= testPeriodStop ? true : false : true  // Not a strategy or not using testPeriod so it is "always" the period
+
 // Color the period (or don't)
 testPeriodBackgroundColor = testPeriodBackground and testPeriod() ? #000055 : na
 bgcolor(testPeriodBackgroundColor, transp=90)
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Generate Buy Sell signals, 
+// Generate Buy Sell signals,
 
 buy = 0
-buy  := openLong  and testPeriod() ? nz(buy[1])>0?buy[1]+1  :1 : 0
-sell= 0
-sell := openShort and testPeriod() ? nz(sell[1])>0?sell[1]+1 :1 : 0
+buy := openLong and testPeriod() ? nz(buy[1]) > 0 ? buy[1] + 1 : 1 : 0
+sell = 0
+sell := openShort and testPeriod() ? nz(sell[1]) > 0 ? sell[1] + 1 : 1 : 0
 
 
 //////////////////////////
@@ -138,33 +153,39 @@ sell := openShort and testPeriod() ? nz(sell[1])>0?sell[1]+1 :1 : 0
 //////////////////////////
 
 // Keep track of current trade state
-longClose = false, longClose := nz(longClose[1],false)
-shortClose = false, shortClose := nz(shortClose[1],false)
-tradeState = 0, tradeState := nz(tradeState[1])
-tradeState := tradeState==0 ?   buy==1 and (barstate.isconfirmed or barstate.ishistory) and isLong and not longClose and not shortClose? 1 :
-                               sell==1  and (barstate.isconfirmed or barstate.ishistory) and isShort and not longClose and not shortClose? -1 : 
-                          tradeState : tradeState
+longClose = false
+longClose := nz(longClose[1], false)
+shortClose = false
+shortClose := nz(shortClose[1], false)
+tradeState = 0
+tradeState := nz(tradeState[1])
+tradeState := tradeState == 0 ?
+   buy == 1 and (barstate.isconfirmed or barstate.ishistory) and isLong and
+   not longClose and not shortClose ? 1 :
+   sell == 1 and (barstate.isconfirmed or barstate.ishistory) and isShort and
+   not longClose and not shortClose ? -1 : tradeState : tradeState
 
 ///////////////////////////////////////////////////////
 //Handle Entry Conditions, when state changes direction.
 
-longCondition  = false
+longCondition = false
 shortCondition = false
-longCondition  := change(tradeState) and tradeState==1
-shortCondition := change(tradeState) and tradeState==-1
+longCondition := change(tradeState) and tradeState == 1
+shortCondition := change(tradeState) and tradeState == -1
 if flipTrade
     temp = longCondition
-    longCondition  := shortCondition
+    longCondition := shortCondition
     shortCondition := temp
+    shortCondition
 //end if
 
 // Exit on Sell signal
-longExitC  = closeLong  and testPeriod() ? 1 : 0
+longExitC = closeLong and testPeriod() ? 1 : 0
 shortExitC = closeShort and testPeriod() ? 1 : 0
 
 // Exit condition for no SL.
-longExit = change(longExitC) and longExitC==1 and tradeState==1
-shortExit = change(shortExitC) and shortExitC==1 and tradeState==-1
+longExit = change(longExitC) and longExitC == 1 and tradeState == 1
+shortExit = change(shortExitC) and shortExitC == 1 and tradeState == -1
 
 // -- debugs
 //plotchar(tradeState,"tradeState at Event",location=location.bottom, color=na)
@@ -177,8 +198,8 @@ shortExit = change(shortExitC) and shortExitC==1 and tradeState==-1
 //======[ Deal Entry Prices ]======//
 /////////////////////////////////////
 
-last_open_longCondition = na
-last_open_shortCondition = na
+last_open_longCondition = float(na)
+last_open_shortCondition = float(na)
 last_open_longCondition := longCondition ? close : nz(last_open_longCondition[1])
 last_open_shortCondition := shortCondition ? close : nz(last_open_shortCondition[1])
 
@@ -186,7 +207,7 @@ last_open_shortCondition := shortCondition ? close : nz(last_open_shortCondition
 //======[ Position State ]======//
 //////////////////////////////////
 
-in_longCondition  = tradeState == 1 
+in_longCondition = tradeState == 1
 in_shortCondition = tradeState == -1
 
 /////////////////////////////////
@@ -194,19 +215,29 @@ in_shortCondition = tradeState == -1
 /////////////////////////////////
 
 isTS = input(false, "Trailing Stop")
-ts = input(3.0, "Trailing Stop (%)", minval=0,step=0.1, type=float) /100
+ts = input(3.0, "Trailing Stop (%)", minval=0, step=0.1, type=input.float) / 100
 
-last_high = na
-last_low = na
-last_high_short = na
-last_low_long = na
-last_high := not in_longCondition ? na : in_longCondition and (na(last_high[1]) or high_ > nz(last_high[1])) ? high_ : nz(last_high[1])
-last_high_short := not in_shortCondition ? na : in_shortCondition and (na(last_high[1]) or high_ > nz(last_high[1])) ? high_ : nz(last_high[1])
-last_low := not in_shortCondition ? na : in_shortCondition and (na(last_low[1]) or low_ < nz(last_low[1])) ? low_ : nz(last_low[1])
-last_low_long := not in_longCondition ? na : in_longCondition and (na(last_low[1]) or low_ < nz(last_low[1])) ? low_ : nz(last_low[1])
+last_high = float(na)
+last_low = float(na)
+last_high_short = float(na)
+last_low_long = float(na)
+last_high := not in_longCondition ? na :
+   in_longCondition and (na(last_high[1]) or high_ > nz(last_high[1])) ? high_ :
+   nz(last_high[1])
+last_high_short := not in_shortCondition ? na :
+   in_shortCondition and (na(last_high[1]) or high_ > nz(last_high[1])) ? high_ :
+   nz(last_high[1])
+last_low := not in_shortCondition ? na :
+   in_shortCondition and (na(last_low[1]) or low_ < nz(last_low[1])) ? low_ :
+   nz(last_low[1])
+last_low_long := not in_longCondition ? na :
+   in_longCondition and (na(last_low[1]) or low_ < nz(last_low[1])) ? low_ :
+   nz(last_low[1])
 
-long_ts =  isTS and in_longCondition and not na(last_high) and (low_ <= last_high - last_high * ts) //and (last_high >= last_open_longCondition + last_open_longCondition * tsi)
-short_ts = isTS and in_shortCondition and not na(last_low) and (high_ >= last_low + last_low * ts) //and (last_low <= last_open_shortCondition - last_open_shortCondition * tsi)
+long_ts = isTS and in_longCondition and not na(last_high) and
+   low_ <= last_high - last_high * ts  //and (last_high >= last_open_longCondition + last_open_longCondition * tsi)
+short_ts = isTS and in_shortCondition and not na(last_low) and
+   high_ >= last_low + last_low * ts  //and (last_low <= last_open_shortCondition - last_open_shortCondition * tsi)
 
 
 ///////////////////////////////
@@ -214,28 +245,34 @@ short_ts = isTS and in_shortCondition and not na(last_low) and (high_ >= last_lo
 ///////////////////////////////
 
 isTP = input(false, "Take Profit")
-tp = input(3.0, "Take Profit (%)",minval=0,step=0.1,type=float) / 100
-ttp = input(1.0, "Trailing Profit (%)",minval=0,step=0.1,type=float) / 100
-ttp := ttp>tp ? tp : ttp
+tp = input(3.0, "Take Profit (%)", minval=0, step=0.1, type=input.float) / 100
+ttp = input(1.0, "Trailing Profit (%)", minval=0, step=0.1, type=input.float) / 100
+ttp := ttp > tp ? tp : ttp
 
-long_tp =  isTP and in_longCondition  and (last_high >= last_open_longCondition + last_open_longCondition * tp)   and (low_ <= last_high - last_high * ttp)
-short_tp = isTP and in_shortCondition and (last_low <= last_open_shortCondition - last_open_shortCondition * tp) and (high_ >= last_low + last_low * ttp)
+long_tp = isTP and in_longCondition and
+   last_high >= last_open_longCondition + last_open_longCondition * tp and
+   low_ <= last_high - last_high * ttp
+short_tp = isTP and in_shortCondition and
+   last_low <= last_open_shortCondition - last_open_shortCondition * tp and
+   high_ >= last_low + last_low * ttp
 
 /////////////////////////////
 //======[ Stop Loss ]======//
 /////////////////////////////
 
 isSL = input(false, "Stop Loss")
-sl = input(3.0, "Stop Loss (%)", minval=0,step=0.1, type=float) / 100
-long_sl =  isSL and in_longCondition and (low_ <= last_open_longCondition - last_open_longCondition * sl)
-short_sl = isSL and in_shortCondition and (high_ >= last_open_shortCondition + last_open_shortCondition * sl)
+sl = input(3.0, "Stop Loss (%)", minval=0, step=0.1, type=input.float) / 100
+long_sl = isSL and in_longCondition and
+   low_ <= last_open_longCondition - last_open_longCondition * sl
+short_sl = isSL and in_shortCondition and
+   high_ >= last_open_shortCondition + last_open_shortCondition * sl
 
 ////////////////////////////////////
 //======[ Stop on Opposite ]======//
 ////////////////////////////////////
 // fastExit is superced by the design of specifying Open and Close setting in strategy
-long_sos = (fastExit or (not isTS and not isSL)) and longExit and in_longCondition
-short_sos = (fastExit or (not isTS and not isSL)) and shortExit and in_shortCondition 
+long_sos = (fastExit or not isTS and not isSL) and longExit and in_longCondition
+short_sos = (fastExit or not isTS and not isSL) and shortExit and in_shortCondition
 
 
 /////////////////////////////////
@@ -243,63 +280,56 @@ short_sos = (fastExit or (not isTS and not isSL)) and shortExit and in_shortCond
 /////////////////////////////////
 
 // Create a single close for all the different closing conditions, all conditions here are non-repainting
-longClose :=  isLong and (long_tp or long_sl or long_ts or long_sos) and not longCondition
-shortClose := isShort and (short_tp or short_sl or short_ts or short_sos) and not shortCondition
+longClose := isLong and (long_tp or long_sl or long_ts or long_sos) and not longCondition
+shortClose := isShort and (short_tp or short_sl or short_ts or short_sos) and
+   not shortCondition
 
 ///////////////////////////////
 //======[ Plot Colors ]======//
 ///////////////////////////////
 
-longCloseCol = na
-shortCloseCol = na
-longCloseCol := long_tp ? green : long_sl ? maroon : long_ts ? purple : long_sos ? orange :longCloseCol[1]
-shortCloseCol := short_tp ? green : short_sl ? maroon : short_ts ? purple : short_sos ? orange : shortCloseCol[1]
+longCloseCol = color(na)
+shortCloseCol = color(na)
+longCloseCol := long_tp ? color.green : long_sl ? color.maroon :
+   long_ts ? color.purple : long_sos ? color.orange : longCloseCol[1]
+shortCloseCol := short_tp ? color.green : short_sl ? color.maroon :
+   short_ts ? color.purple : short_sos ? color.orange : shortCloseCol[1]
 //
-tpColor = isTP and in_longCondition ? lime : isTP and in_shortCondition ? lime : na
-slColor = isSL and in_longCondition ? red : isSL and in_shortCondition ? red : na
+tpColor = isTP and in_longCondition ? color.lime :
+   isTP and in_shortCondition ? color.lime : na
+slColor = isSL and in_longCondition ? color.red :
+   isSL and in_shortCondition ? color.red : na
 
 
 //////////////////////////////////
 //======[ Strategy Plots ]======//
 //////////////////////////////////
 
-plot(isTS and in_longCondition?
-     last_high - last_high * ts : na, "Long Trailing", fuchsia, style=2, linewidth=2,offset=1)
-plot(isTP and in_longCondition and last_high < last_open_longCondition + last_open_longCondition * tp ? 
-     last_open_longCondition + last_open_longCondition * tp : na, "Long TP Active", tpColor, style=3,join=false, linewidth=2,offset=1)
-plot(isTP and in_longCondition and last_high >= last_open_longCondition +  last_open_longCondition * tp ? 
-     last_high - last_high * ttp : na, "Long Trailing", black, style=2, linewidth=2,offset=1)
-plot(isSL and in_longCondition and last_low_long > last_open_longCondition - last_open_longCondition * sl ? 
-     last_open_longCondition - last_open_longCondition * sl : na, "Long SL", slColor, style=3,join=false, linewidth=2,offset=1)
+plot(isTS and in_longCondition ? last_high - last_high * ts : na, "Long Trailing", LIGHTRED, style=plot.style_linebr, linewidth=2, offset=1)
+plot(isTP and in_longCondition and last_high < last_open_longCondition + last_open_longCondition * tp ? last_open_longCondition + last_open_longCondition * tp : na, "Long TP Active", tpColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
+plot(isTP and in_longCondition and last_high >= last_open_longCondition + last_open_longCondition * tp ? last_high - last_high * ttp : na, "Long Trailing", LIGHTGREEN, style=plot.style_linebr, linewidth=2, offset=1)
+plot(isSL and in_longCondition and last_low_long > last_open_longCondition - last_open_longCondition * sl ? last_open_longCondition - last_open_longCondition * sl : na, "Long SL", slColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
 //
-plot(isTS and in_shortCondition?
-     last_low + last_low * ts : na, "Short Trailing", fuchsia, style=2, linewidth=2,offset=1)
-plot(isTP and in_shortCondition and last_low > last_open_shortCondition - last_open_shortCondition * tp ? 
-     last_open_shortCondition - last_open_shortCondition * tp : na, "Short TP Active", tpColor, style=3,join=false, linewidth=2,offset=1)
-plot(isTP and in_shortCondition and last_low <= last_open_shortCondition -  last_open_shortCondition * tp ? 
-     last_low + last_low * ttp : na, "Short Trailing", black, style=2, linewidth=2,offset=1)
-plot(isSL and in_shortCondition and last_high_short < last_open_shortCondition + last_open_shortCondition * sl ? 
-     last_open_shortCondition + last_open_shortCondition * sl : na, "Short SL", slColor, style=3,join=false, linewidth=2,offset=1)
+plot(isTS and in_shortCondition ? last_low + last_low * ts : na, "Short Trailing", LIGHTRED, style=plot.style_linebr, linewidth=2, offset=1)
+plot(isTP and in_shortCondition and last_low > last_open_shortCondition - last_open_shortCondition * tp ? last_open_shortCondition - last_open_shortCondition * tp : na, "Short TP Active", tpColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
+plot(isTP and in_shortCondition and last_low <= last_open_shortCondition - last_open_shortCondition * tp ? last_low + last_low * ttp : na, "Short Trailing", LIGHTGREEN, style=plot.style_linebr, linewidth=2, offset=1)
+plot(isSL and in_shortCondition and last_high_short < last_open_shortCondition + last_open_shortCondition * sl ? last_open_shortCondition + last_open_shortCondition * sl : na, "Short SL", slColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
 //
-bclr = not clrBars ? na : tradeState==0 ? GRAY : 
-                          in_longCondition ? close<last_open_longCondition? DARKGREEN : LIME :
-                          in_shortCondition ? close>last_open_shortCondition? DARKRED : RED : GRAY
-barcolor(bclr,title="Trade State Bar Colouring")
+bclr = not clrBars ? na : tradeState == 0 ? GRAY :
+   in_longCondition ? close < last_open_longCondition ? DARKGREEN : LIME :
+   in_shortCondition ? close > last_open_shortCondition ? DARKRED : RED : GRAY
+barcolor(bclr, title="Trade State Bar Colouring")
 
 
 ///////////////////////////////
 //======[ Alert Plots ]======//
 ///////////////////////////////
 
-plotshape(longCondition and isStudy?close:na, title="Long", color=green, textcolor=green, transp=0, 
-          style=shape.triangleup, location=location.belowbar, size=size.small,text="LONG",offset=0)
-plotshape(longClose and isStudy?close:na, title="Long Close", color=longCloseCol, textcolor=white, transp=0, 
-          style=shape.labeldown, location=location.abovebar, size=size.small,text="Long\nClose",offset=0)
+plotshape(longCondition and isStudy ? close : na, title="Long", color=color.green, textcolor=color.green, transp=0, style=shape.triangleup, location=location.belowbar, size=size.small, text="LONG", offset=0)
+plotshape(longClose and isStudy ? close : na, title="Long Close", color=longCloseCol, textcolor=color.white, transp=0, style=shape.labeldown, location=location.abovebar, size=size.small, text="Long\nClose", offset=0)
 
-plotshape(shortCondition and isStudy?close:na, title="Short", color=red, textcolor=red, transp=0, 
-          style=shape.triangledown, location=location.abovebar, size=size.small,text="SHORT",offset=0)
-plotshape(shortClose and isStudy?close:na, title="Short Close", color=shortCloseCol, textcolor=white, transp=0, 
-          style=shape.labelup, location=location.belowbar, size=size.small,text="Short\nClose",offset=0)
+plotshape(shortCondition and isStudy ? close : na, title="Short", color=color.red, textcolor=color.red, transp=0, style=shape.triangledown, location=location.abovebar, size=size.small, text="SHORT", offset=0)
+plotshape(shortClose and isStudy ? close : na, title="Short Close", color=shortCloseCol, textcolor=color.white, transp=0, style=shape.labelup, location=location.belowbar, size=size.small, text="Short\nClose", offset=0)
 
 // Autoview alert syntax - This assumes you are trading coins BUY and SELL on Binance Exchange
 // WARNING*** Only use Autoview to automate a strategy after you've sufficiently backtested and forward tested the strategy.
@@ -317,7 +347,7 @@ alertcondition(shortCondition and isStudy, "Open Short", "SHORT")
 // (NOTE: with Renko you can only use "Once Per Bar Close" option)
 //      b=sell q=99% e=binance s=ethbtc t=market  ( CLOSE LONGS )
 // or   b=buy q=99% e=binance s=btcusdt t=market  ( CLOSE SHORTS )
-// This gets it as it happens and typically results in a better exit live than in the backtest. 
+// This gets it as it happens and typically results in a better exit live than in the backtest.
 // It works really well for counteracting some market slippage
 alertcondition(longClose and isStudy, "Close Longs", "CLOSE LONGS")
 alertcondition(shortClose and isStudy, "Close Shorts", "CLOSE SHORTS")
@@ -332,7 +362,7 @@ if testPeriod() and isLong and isStrategy
 if testPeriod() and isShort and isStrategy
     strategyEntry("Short", 0, shortCondition)
     strategyClose("Short", shortClose)
-    
+
 // --- Debugs
 //plotchar(longExit,title="longExit",location=location.bottom,color=na)
 //plotchar(longCondition,title="longCondition",location=location.bottom,color=na)
@@ -348,16 +378,19 @@ if testPeriod() and isShort and isStrategy
 if longClose or not in_longCondition
     last_high := na
     last_high_short := na
-    
+    last_high_short
+
 if shortClose or not in_shortCondition
     last_low := na
     last_low_long := na
-    
+    last_low_long
+
 if longClose or shortClose
     tradeState := 0
     in_longCondition := false
     in_shortCondition := false
+    in_shortCondition
 
-    
-plotchar(tradeState,"tradeState at EOF",location=location.bottom, color=na)
+
+plotchar(tradeState, "tradeState at EOF", location=location.bottom, color=na)
 // EOF
