@@ -4,7 +4,7 @@
 
 
 // BEGIN UNCOMMENT FOR BACKTESTING
-strategy(title="Strategy Template", shorttitle="Strategy Template V4", overlay=true, pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
+strategy(title="Squeeze Momentum Strategy", shorttitle="SQZMOM Strategy", overlay=true, pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
 strategyEntry(name, direction, myCondition) =>
     if direction == 1 and name == "Long"
         strategy.entry("Long", 1, when=myCondition)
@@ -83,11 +83,72 @@ LIGHTRED = #ef9a9a
 //////////////////////////////////////////////////////////////////////////////////////////
 // BEGIN ACTUAL STRATEGY
 
-// Strategy specific inputs
+//
+// @author LazyBear
+// study(shorttitle = "Squeeze Momentum", title="Squeeze Momentum Indicator [LazyBear]", overlay=false)
+
+length = input(20, title="BB Length")
+multBB = input(2.0, title="BB MultFactor")
+lengthKC = input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+
+useTrueRange = input(true, title="Use TrueRange (KC)", type=input.bool)
+
+// Calculate BB
+source = close
+basis = sma(source, length)
+dev = multBB * stdev(source, length)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// Calculate KC
+ma = sma(source, lengthKC)
+range = useTrueRange ? tr : high - low
+rangema = sma(range, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+
+sqzOn = lowerBB > lowerKC and upperBB < upperKC
+sqzOff = lowerBB < lowerKC and upperBB > upperKC
+noSqz = sqzOn == false and sqzOff == false
+
+val = linreg(source - avg(avg(highest(high, lengthKC), lowest(low, lengthKC)), sma(close, lengthKC)), lengthKC, 0)
+
+bcolor = iff(val > 0, iff(val > nz(val[1]), #00ff00, #008000), iff(val < nz(val[1]), #ff0000, #800000))
+scolor = noSqz ? #0e60df: sqzOn ? #0e60df : #12e2fc
+
+// Plot the SQUEEZE/MOMENTUM
+plot(val, color=bcolor, style=plot.style_histogram, linewidth=4)
+plot(0, color=scolor, style=plot.style_circles, linewidth=2)
+
+// Plot the SQUEEZE/MOMENTUM
+// plot(val, color=bcolor, style=histogram, linewidth=4)
+// plot(0, color=scolor, style=cross, linewidth=2)
+
+//------------------------------------ Stacked UP Ema's ---------------------------------
+// study("EMA stacked", overlay=true)
+
+length1 = input(8,  '1 Ema length')
+length2 = input(21, '2 Ema length')
+length3 = input(34, '3 Ema length')
+length4 = input(55, '4 Ema length')
+length5 = input(89, '5 Ema length')
+
+ema1 = ema(close, length1)
+ema2 = ema(close, length2)
+ema3 = ema(close, length3)
+ema4 = ema(close, length4)
+ema5 = ema(close, length5)
+
+// stack = close > ema5 and close > ema4 and close > ema3 and close > ema2 and close > ema1
+isEmaStackUP = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5
+plotshape(true, style=shape.xcross, color=isEmaStackUP ? color.green : color.red, show_last=100)
+
+//----------------------------- Strategy specific inputs -------------------------------
 quick = input(14, title="Quick Period", step=1, minval=1)
 slow = input(28, title="Slow Period", step=1, minval=1)
 
-//Strategy
+// ------------------------------------ STRATEGY ----------------------------------------
 openLong = crossover(sma(src, quick * mult), sma(src, slow * mult))
 closeLong = crossunder(sma(src, quick * mult), sma(src, slow * mult))
 
