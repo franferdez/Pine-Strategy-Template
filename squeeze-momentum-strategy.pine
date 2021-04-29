@@ -2,7 +2,6 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © franferdez
 
-
 // BEGIN UNCOMMENT FOR BACKTESTING
 strategy(title="Squeeze Momentum Strategy", shorttitle="SQZMOM Strategy", overlay=true, pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
 strategyEntry(name, direction, myCondition) =>
@@ -65,7 +64,7 @@ src = uPrice == "close" ? close_ :
 // fastExit  = input(false,title="Use Opposite Trade as a Close Signal")
 fastExit = false
 isLong = input(true, title="Allow Longs")
-isShort = input(true, title="Allow Shorts")
+isShort = input(false, title="Allow Shorts")
 flipTrade = input(false, title="Flip/Invert Strategy")
 clrBars = input(false, title="Colour Candles to Trade Order state")
 
@@ -113,17 +112,18 @@ sqzOff = lowerBB < lowerKC and upperBB > upperKC
 noSqz = sqzOn == false and sqzOff == false
 
 val = linreg(source - avg(avg(highest(high, lengthKC), lowest(low, lengthKC)), sma(close, lengthKC)), lengthKC, 0)
-
-bcolor = iff(val > 0, iff(val > nz(val[1]), #00ff00, #008000), iff(val < nz(val[1]), #ff0000, #800000))
+LIGHTGREEN_SQZ = #00ff00
+DARKGREEN_SQZ = #008000
+LIGHTRED_SQZ = #ff0000
+DARKRED_SQZ = #800000
+bcolor = iff(val > 0, iff(val > nz(val[1]), LIGHTGREEN_SQZ, DARKGREEN_SQZ), iff(val < nz(val[1]), LIGHTRED_SQZ, DARKRED_SQZ))
 scolor = noSqz ? #0e60df: sqzOn ? #0e60df : #12e2fc
 
+isBullMomentumON = val > 0 and (val > nz(val[1]))
+isBullMomentumOFF =  val > 0 and not (val > nz(val[1]))
 // Plot the SQUEEZE/MOMENTUM
-plot(val, color=bcolor, style=plot.style_histogram, linewidth=4)
-plot(0, color=scolor, style=plot.style_circles, linewidth=2)
-
-// Plot the SQUEEZE/MOMENTUM
-// plot(val, color=bcolor, style=histogram, linewidth=4)
-// plot(0, color=scolor, style=cross, linewidth=2)
+// plot(val, color=bcolor, style=plot.style_histogram, linewidth=4)
+// plot(0, color=scolor, style=plot.style_circles, linewidth=2)
 
 //------------------------------------ Stacked UP Ema's ---------------------------------
 // study("EMA stacked", overlay=true)
@@ -149,8 +149,10 @@ quick = input(14, title="Quick Period", step=1, minval=1)
 slow = input(28, title="Slow Period", step=1, minval=1)
 
 // ------------------------------------ STRATEGY ----------------------------------------
-openLong = crossover(sma(src, quick * mult), sma(src, slow * mult))
-closeLong = crossunder(sma(src, quick * mult), sma(src, slow * mult))
+
+// openLong = crossover(sma(src, quick * mult), sma(src, slow * mult))
+openLong = close > ema2 and sqzOn and isBullMomentumON and isEmaStackUP
+closeLong = isBullMomentumOFF
 
 openShort = closeLong
 closeShort = openLong
