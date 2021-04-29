@@ -2,8 +2,9 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © franferdez
 
+
 // BEGIN UNCOMMENT FOR BACKTESTING
-strategy(title="Squeeze Momentum Strategy", shorttitle="SQZMOM Strategy", overlay=true, pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
+strategy(title="Strategy Momentum Strategy", shorttitle="SQZMOM Strategy", overlay=true, pyramiding=0, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=1000)
 strategyEntry(name, direction, myCondition) =>
     if direction == 1 and name == "Long"
         strategy.entry("Long", 1, when=myCondition)
@@ -67,6 +68,12 @@ isLong = input(true, title="Allow Longs")
 isShort = input(false, title="Allow Shorts")
 flipTrade = input(false, title="Flip/Invert Strategy")
 clrBars = input(false, title="Colour Candles to Trade Order state")
+
+// Stop loss ATR inputs
+isAtrMult = input(true, title="Allow ATR Multipplir for stops losses")
+atrLen = input(10, title="ATR Length", minval=10, maxval= 200)
+atrValue = atr(atrLen)
+
 
 // CONSTANTS
 AQUA = #00FFFFFF
@@ -309,25 +316,29 @@ short_ts = isTS and in_shortCondition and not na(last_low) and
 isTP = input(false, "Take Profit")
 tp = input(3.0, "Take Profit (%)", minval=0, step=0.1, type=input.float) / 100
 ttp = input(1.0, "Trailing Profit (%)", minval=0, step=0.1, type=input.float) / 100
+tpMult = input(4.0, title="Take Profit (ATR Steps)", minval=1, maxval=20, type=input.float)
+
 ttp := ttp > tp ? tp : ttp
 
 long_tp = isTP and in_longCondition and
-   last_high >= last_open_longCondition + last_open_longCondition * tp and
-   low_ <= last_high - last_high * ttp
+   last_high >= last_open_longCondition + last_open_longCondition * (isAtrMult? atrValue * tpMult : tp) and
+   low_ <= last_high - last_high *  (isAtrMult? atrValue * tpMult : ttp)
 short_tp = isTP and in_shortCondition and
-   last_low <= last_open_shortCondition - last_open_shortCondition * tp and
-   high_ >= last_low + last_low * ttp
+   last_low <= last_open_shortCondition - last_open_shortCondition * (isAtrMult? atrValue * tpMult : tp) and
+   high_ >= last_low + last_low * (isAtrMult? atrValue * tpMult : ttp)
 
 /////////////////////////////
 //======[ Stop Loss ]======//
 /////////////////////////////
 
 isSL = input(false, "Stop Loss")
-sl = input(3.0, "Stop Loss (%)", minval=0, step=0.1, type=input.float) / 100
+sl = input(1.0, "Stop Loss (%)", minval=0, step=0.1, type=input.float) / 100
+slMult = input(4.0, title="Stop Loss (ATR Steps)", minval=1, maxval=20, type=input.float)
+
 long_sl = isSL and in_longCondition and
-   low_ <= last_open_longCondition - last_open_longCondition * sl
+   low_ <= last_open_longCondition - last_open_longCondition * (isAtrMult? atrValue * slMult : sl)
 short_sl = isSL and in_shortCondition and
-   high_ >= last_open_shortCondition + last_open_shortCondition * sl
+   high_ >= last_open_shortCondition + last_open_shortCondition * (isAtrMult? atrValue * slMult : sl)
 
 ////////////////////////////////////
 //======[ Stop on Opposite ]======//
@@ -368,14 +379,14 @@ slColor = isSL and in_longCondition ? color.red :
 //////////////////////////////////
 
 plot(isTS and in_longCondition ? last_high - last_high * ts : na, "Long Trailing", LIGHTRED, style=plot.style_linebr, linewidth=2, offset=1)
-plot(isTP and in_longCondition and last_high < last_open_longCondition + last_open_longCondition * tp ? last_open_longCondition + last_open_longCondition * tp : na, "Long TP Active", tpColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
+plot(isTP and in_longCondition and last_high < last_open_longCondition + last_open_longCondition * tp ? last_open_longCondition + last_open_longCondition * tp : na, "Long TP Active", tpColor, style=plot.style_linebr, join=false, linewidth=2, offset=1)
 plot(isTP and in_longCondition and last_high >= last_open_longCondition + last_open_longCondition * tp ? last_high - last_high * ttp : na, "Long Trailing", LIGHTGREEN, style=plot.style_linebr, linewidth=2, offset=1)
-plot(isSL and in_longCondition and last_low_long > last_open_longCondition - last_open_longCondition * sl ? last_open_longCondition - last_open_longCondition * sl : na, "Long SL", slColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
+plot(isSL and in_longCondition and last_low_long > last_open_longCondition - last_open_longCondition * sl ? last_open_longCondition - last_open_longCondition * sl : na, "Long SL", slColor, style=plot.style_linebr, join=false, linewidth=2, offset=1)
 //
 plot(isTS and in_shortCondition ? last_low + last_low * ts : na, "Short Trailing", LIGHTRED, style=plot.style_linebr, linewidth=2, offset=1)
-plot(isTP and in_shortCondition and last_low > last_open_shortCondition - last_open_shortCondition * tp ? last_open_shortCondition - last_open_shortCondition * tp : na, "Short TP Active", tpColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
+plot(isTP and in_shortCondition and last_low > last_open_shortCondition - last_open_shortCondition * tp ? last_open_shortCondition - last_open_shortCondition * tp : na, "Short TP Active", tpColor, style=plot.style_linebr, join=false, linewidth=2, offset=1)
 plot(isTP and in_shortCondition and last_low <= last_open_shortCondition - last_open_shortCondition * tp ? last_low + last_low * ttp : na, "Short Trailing", LIGHTGREEN, style=plot.style_linebr, linewidth=2, offset=1)
-plot(isSL and in_shortCondition and last_high_short < last_open_shortCondition + last_open_shortCondition * sl ? last_open_shortCondition + last_open_shortCondition * sl : na, "Short SL", slColor, style=plot.style_cross, join=false, linewidth=2, offset=1)
+plot(isSL and in_shortCondition and last_high_short < last_open_shortCondition + last_open_shortCondition * sl ? last_open_shortCondition + last_open_shortCondition * sl : na, "Short SL", slColor, style=plot.style_linebr, join=false, linewidth=2, offset=1)
 //
 bclr = not clrBars ? na : tradeState == 0 ? GRAY :
    in_longCondition ? close < last_open_longCondition ? DARKGREEN : LIME :
