@@ -70,7 +70,7 @@ flipTrade = input(false, title="Flip/Invert Strategy")
 clrBars = input(false, title="Colour Candles to Trade Order state")
 
 // Stop loss ATR inputs
-isAtrMult = input(false, title="Allow ATR Multipplir for stops losses")
+isAtrEnabled = input(true, title="Allow ATR value for stops losses")
 atrLen = input(10, title="ATR Length", minval=10, maxval= 200)
 atrValue = atr(atrLen)
 
@@ -143,7 +143,7 @@ scolor = noSqz ? color.blue : sqzOn ? color.red : color.green
 plot(val, color=bcolor, style=plot.style_histogram, linewidth=3)
 plot(0, color=scolor, style=plot.style_circles, linewidth=3)
 
-isBullMomentumON = val > 0 and (val > nz(val[1]))
+isBullMomentumON = val > 0 and (val > nz(val[1])) and nz(val[1]) > 0
 isBullMomentumOFF =  val > 0 and not (val > nz(val[1]))
 // Plot the SQUEEZE/MOMENTUM
 // plot(val, color=bcolor, style=plot.style_histogram, linewidth=4)
@@ -167,16 +167,22 @@ ema5 = ema(close, length5)
 // stack = close > ema5 and close > ema4 and close > ema3 and close > ema2 and close > ema1
 isEmaStackUP = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5
 plotshape(true, style=shape.xcross, color=isEmaStackUP ? color.green : color.red, show_last=100)
+//------------------------------------ MACD ---------------------------------
+withMacd = input(false, "Use macd for strategy")
 
-//----------------------------- Strategy specific inputs -------------------------------
-quick = input(14, title="Quick Period", step=1, minval=1)
-slow = input(28, title="Slow Period", step=1, minval=1)
+fast = 12, slow = 26
+fastMA = ema(close, fast)
+slowMA = ema(close, slow)
+macd = fastMA - slowMA
+signal = sma(macd, 9)
+
+macDelta = macd - signal
 
 // ------------------------------------ STRATEGY ----------------------------------------
 
 // openLong = crossover(sma(src, quick * mult), sma(src, slow * mult))
-openLong = close > ema2 and sqzOn and isBullMomentumON and isEmaStackUP
-closeLong = isBullMomentumOFF
+openLong = close > ema2 and sqzOn and isBullMomentumON and isEmaStackUP and (withMacd? crossover(macDelta, 0) : true)
+closeLong = (isBullMomentumOFF and sqzOff) or (withMacd? crossunder(macDelta, 0): false)
 
 openShort = closeLong
 closeShort = openLong
@@ -338,11 +344,11 @@ tpMult = input(4.0, title="Take Profit (ATR Steps)", minval=1, maxval=20, type=i
 ttp := ttp > tp ? tp : ttp
 
 long_tp = isTP and in_longCondition and
-   last_high >= last_open_longCondition + last_open_longCondition * (isAtrMult? atrValue * tpMult : tp) and
-   low_ <= last_high - last_high *  (isAtrMult? atrValue * tpMult : ttp)
+   last_high >= last_open_longCondition + (isAtrEnabled? atrValue * tpMult : last_open_longCondition *  tp) and
+   low_ <= last_high - (isAtrEnabled? atrValue * tpMult : last_high * ttp)
 short_tp = isTP and in_shortCondition and
-   last_low <= last_open_shortCondition - last_open_shortCondition * (isAtrMult? atrValue * tpMult : tp) and
-   high_ >= last_low + last_low * (isAtrMult? atrValue * tpMult : ttp)
+   last_low <= last_open_shortCondition -  (isAtrEnabled? atrValue * tpMult : last_open_shortCondition * tp) and
+   high_ >= last_low + (isAtrEnabled? atrValue * tpMult : last_low * ttp)
 
 /////////////////////////////
 //======[ Stop Loss ]======//
@@ -353,9 +359,9 @@ sl = input(1.0, "Stop Loss (%)", minval=0, step=0.1, type=input.float) / 100
 slMult = input(4.0, title="Stop Loss (ATR Steps)", minval=1, maxval=20, type=input.float)
 
 long_sl = isSL and in_longCondition and
-   low_ <= last_open_longCondition - last_open_longCondition * (isAtrMult? atrValue * slMult : sl)
+   low_ <= last_open_longCondition -  (isAtrEnabled? atrValue * slMult : last_open_longCondition * sl)
 short_sl = isSL and in_shortCondition and
-   high_ >= last_open_shortCondition + last_open_shortCondition * (isAtrMult? atrValue * slMult : sl)
+   high_ >= last_open_shortCondition +  (isAtrEnabled? atrValue * slMult : last_open_shortCondition * sl)
 
 ////////////////////////////////////
 //======[ Stop on Opposite ]======//

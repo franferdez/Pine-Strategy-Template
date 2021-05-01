@@ -70,7 +70,7 @@ flipTrade = input(false, title="Flip/Invert Strategy")
 clrBars = input(false, title="Colour Candles to Trade Order state")
 
 // Stop loss ATR inputs
-isAtrMult = input(true, title="Allow ATR Multipplir for stops losses")
+isAtrEnabled = input(true, title="Allow ATR value for stops losses")
 atrLen = input(10, title="ATR Length", minval=10, maxval= 200)
 atrValue = atr(atrLen)
 
@@ -257,11 +257,11 @@ tpMult = input(4.0, title="Take Profit (ATR Steps)", minval=1, maxval=20, type=i
 ttp := ttp > tp ? tp : ttp
 
 long_tp = isTP and in_longCondition and
-   last_high >= last_open_longCondition + last_open_longCondition * (isAtrMult? atrValue * tpMult : tp) and
-   low_ <= last_high - last_high *  (isAtrMult? atrValue * tpMult : ttp)
+   last_high >= last_open_longCondition + (isAtrEnabled? atrValue * tpMult : last_open_longCondition *  tp) and
+   low_ <= last_high - (isAtrEnabled? atrValue * tpMult : last_high * ttp)
 short_tp = isTP and in_shortCondition and
-   last_low <= last_open_shortCondition - last_open_shortCondition * (isAtrMult? atrValue * tpMult : tp) and
-   high_ >= last_low + last_low * (isAtrMult? atrValue * tpMult : ttp)
+   last_low <= last_open_shortCondition -  (isAtrEnabled? atrValue * tpMult : last_open_shortCondition * tp) and
+   high_ >= last_low + (isAtrEnabled? atrValue * tpMult : last_low * ttp)
 
 /////////////////////////////
 //======[ Stop Loss ]======//
@@ -272,9 +272,9 @@ sl = input(1.0, "Stop Loss (%)", minval=0, step=0.1, type=input.float) / 100
 slMult = input(4.0, title="Stop Loss (ATR Steps)", minval=1, maxval=20, type=input.float)
 
 long_sl = isSL and in_longCondition and
-   low_ <= last_open_longCondition - last_open_longCondition * (isAtrMult? atrValue * slMult : sl)
+   low_ <= last_open_longCondition -  (isAtrEnabled? atrValue * slMult : last_open_longCondition * sl)
 short_sl = isSL and in_shortCondition and
-   high_ >= last_open_shortCondition + last_open_shortCondition * (isAtrMult? atrValue * slMult : sl)
+   high_ >= last_open_shortCondition +  (isAtrEnabled? atrValue * slMult : last_open_shortCondition * sl)
 
 ////////////////////////////////////
 //======[ Stop on Opposite ]======//
